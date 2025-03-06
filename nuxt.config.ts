@@ -9,4 +9,10 @@ export default defineNuxtConfig({
       tailwindcss(),
     ],
   },
+  runtimeConfig: {
+    public: {
+      backendUrl: process.env.NUXT_PUBLIC_BACKEND_URL,
+      frontendUrl: process.env.NUXT_PUBLIC_FRONTEND_URL
+    }
+  }
 })
