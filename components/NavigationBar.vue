@@ -92,7 +92,7 @@
   import { ref } from 'vue';
   import { ChevronDownIcon } from '@heroicons/vue/24/solid';
   
-  const isAuthenticated = ref(false); // Replace with actual auth state
+  const isAuthenticated = ref(false);
   const isDropdownOpen = ref(false);
   
   const toggleDropdown = () => {
