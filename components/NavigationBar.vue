@@ -56,7 +56,7 @@
                   src="https://placehold.co/40x40"
                   alt="User Avatar"
                 />
-                <span class="ml-2 text-gray-700">John Doe</span>
+                <span class="ml-2 text-gray-700">{{ user?.name }}</span>
                 <ChevronDownIcon class="ml-1 h-4 w-4 text-gray-500" />
               </button>
 
@@ -89,23 +89,39 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { useRuntimeConfig, useFetch } from '#imports';
 import { ChevronDownIcon } from '@heroicons/vue/24/solid';
-import { isAuthenticated } from './utils/authUtils'; // Import the utility
+import { isAuthenticated } from './utils/authUtils';
+
+const router = useRouter();
+const { public: { backendUrl } } = useRuntimeConfig();
 
 const isDropdownOpen = ref(false);
-
-// Computed property to check authentication state reactively
 const isUserAuthenticated = computed(() => isAuthenticated());
+const authToken = ref(null);
+
+onMounted(() => {
+  authToken.value = localStorage.getItem('auth_token');
+});
+
+const { data: user } = useFetch(`${backendUrl}/user`, {
+  headers: authToken.value ? { Authorization: `Bearer ${authToken.value}` } : {},
+  transform: (data) => data,
+  immediate: isUserAuthenticated.value,
+});
 
 const toggleDropdown = () => {
   isDropdownOpen.value = !isDropdownOpen.value;
 };
 
 const handleLogout = () => {
-  // Implement logout logic
-  localStorage.removeItem('auth_token');
-  isUserAuthenticated.value = false; // This will automatically update the UI
-  navigateTo('/dashboard');
+  if (import.meta.client) {
+    localStorage.removeItem('auth_token');
+  }
+  router.push('/dashboard');
 };
+
 </script>
+
