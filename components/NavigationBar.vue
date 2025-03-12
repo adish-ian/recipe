@@ -56,7 +56,7 @@
                   src="https://placehold.co/40x40"
                   alt="User Avatar"
                 />
-                <span class="ml-2 text-gray-700">John Doe</span>
+                <span class="ml-2 text-gray-700">{{ user?.name }}</span>
                 <ChevronDownIcon class="ml-1 h-4 w-4 text-gray-500" />
               </button>
 
@@ -89,23 +89,52 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { ChevronDownIcon } from '@heroicons/vue/24/solid';
-import { isAuthenticated } from './utils/authUtils'; // Import the utility
+import { useRuntimeConfig } from '#app';
+
+const router = useRouter();
+const config = useRuntimeConfig();
 
 const isDropdownOpen = ref(false);
+const user = ref(null);
+const isUserAuthenticated = computed(() => typeof window !== 'undefined' && localStorage.getItem('auth_token') !== null);
 
-// Computed property to check authentication state reactively
-const isUserAuthenticated = computed(() => isAuthenticated());
+const fetchUserData = async () => {
+  if (!isUserAuthenticated.value) return;
+
+  try {
+    const response = await fetch(`${config.public.backendUrl}/user`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        Accept: 'application/json',
+      },
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch user');
+
+    const data = await response.json();
+    user.value = data; // Expecting { name: "User Name" }
+  } catch (error) {
+    console.error('Error fetching user data:', error);
+  }
+};
+
+const handleLogout = () => {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('auth_token');
+  }
+  router.push('/dashboard');
+};
+
+onMounted(() => {
+  fetchUserData();
+});
 
 const toggleDropdown = () => {
   isDropdownOpen.value = !isDropdownOpen.value;
 };
-
-const handleLogout = () => {
-  // Implement logout logic
-  localStorage.removeItem('auth_token');
-  isUserAuthenticated.value = false; // This will automatically update the UI
-  navigateTo('/dashboard');
-};
 </script>
+
+

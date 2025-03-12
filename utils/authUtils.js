@@ -1,4 +1,6 @@
 export const isAuthenticated = () => {
-    const authToken = localStorage.getItem('auth_token');
-    return !!authToken; // Returns true if authToken exists, false otherwise
-  };
+  if (typeof window === "undefined") {
+    return false; // Avoid accessing localStorage in SSR
+  }
+  return !!localStorage.getItem("auth_token");
+};
