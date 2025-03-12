@@ -91,37 +91,50 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useRuntimeConfig, useFetch } from '#imports';
 import { ChevronDownIcon } from '@heroicons/vue/24/solid';
-import { isAuthenticated } from './utils/authUtils';
+import { useRuntimeConfig } from '#app';
 
 const router = useRouter();
-const { public: { backendUrl } } = useRuntimeConfig();
+const config = useRuntimeConfig();
 
 const isDropdownOpen = ref(false);
-const isUserAuthenticated = computed(() => isAuthenticated());
-const authToken = ref(null);
+const user = ref(null);
+const isUserAuthenticated = computed(() => typeof window !== 'undefined' && localStorage.getItem('auth_token') !== null);
 
-onMounted(() => {
-  authToken.value = localStorage.getItem('auth_token');
-});
+const fetchUserData = async () => {
+  if (!isUserAuthenticated.value) return;
 
-const { data: user } = useFetch(`${backendUrl}/user`, {
-  headers: authToken.value ? { Authorization: `Bearer ${authToken.value}` } : {},
-  transform: (data) => data,
-  immediate: isUserAuthenticated.value,
-});
+  try {
+    const response = await fetch(`${config.public.backendUrl}/user`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        Accept: 'application/json',
+      },
+    });
 
-const toggleDropdown = () => {
-  isDropdownOpen.value = !isDropdownOpen.value;
+    if (!response.ok) throw new Error('Failed to fetch user');
+
+    const data = await response.json();
+    user.value = data; // Expecting { name: "User Name" }
+  } catch (error) {
+    console.error('Error fetching user data:', error);
+  }
 };
 
 const handleLogout = () => {
-  if (import.meta.client) {
+  if (typeof window !== 'undefined') {
     localStorage.removeItem('auth_token');
   }
   router.push('/dashboard');
 };
 
+onMounted(() => {
+  fetchUserData();
+});
+
+const toggleDropdown = () => {
+  isDropdownOpen.value = !isDropdownOpen.value;
+};
 </script>
+
 
