@@ -19,7 +19,7 @@
               Home
             </NuxtLink>
             <NuxtLink
-              to="/recipes"
+              to="/dashboard"
               class="text-gray-900 hover:text-indigo-600 inline-flex items-center px-1 pt-1 text-sm font-medium"
             >
               Recipes
@@ -75,8 +75,10 @@
                   <button
                     @click="handleLogout"
                     class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    :disabled="logoutLoading"
                   >
-                    Logout
+                    <span v-if="!logoutLoading">Logout</span>
+                    <span v-else>Logging out...</span>
                   </button>
                 </div>
               </div>
@@ -90,42 +92,61 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
 import { ChevronDownIcon } from '@heroicons/vue/24/solid';
-import { useRuntimeConfig } from '#app';
 
-const router = useRouter();
-const config = useRuntimeConfig();
-
+const { public: { backendUrl } } = useRuntimeConfig();
 const isDropdownOpen = ref(false);
 const user = ref(null);
-const isUserAuthenticated = computed(() => typeof window !== 'undefined' && localStorage.getItem('auth_token') !== null);
+const logoutLoading = ref(false); // Add loading state for logout
+
+// Use Nuxt's useCookie composable
+const authToken = useCookie('auth_token');
+const isUserAuthenticated = computed(() => !!authToken.value);
 
 const fetchUserData = async () => {
   if (!isUserAuthenticated.value) return;
 
   try {
-    const response = await fetch(`${config.public.backendUrl}/user`, {
+    const response = await $fetch(`${backendUrl}/user`, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        Authorization: `Bearer ${authToken.value}`,
         Accept: 'application/json',
       },
     });
-
-    if (!response.ok) throw new Error('Failed to fetch user');
-
-    const data = await response.json();
-    user.value = data; // Expecting { name: "User Name" }
+    user.value = response;
   } catch (error) {
     console.error('Error fetching user data:', error);
   }
 };
 
-const handleLogout = () => {
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('auth_token');
+const handleLogout = async () => {
+  logoutLoading.value = true;
+  
+  try {
+    // First try to call logout endpoint with the current token
+    if (authToken.value) {
+      try {
+        await $fetch(`${backendUrl}/logout`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${authToken.value}`,
+          },
+        });
+      } catch (error) {
+        console.warn('Logout API call failed, proceeding with client-side logout:', error);
+      }
+    }
+    
+    // Clear the auth cookie
+    authToken.value = null;
+    
+    // Redirect to home page after logout
+    await navigateTo('/dashboard');
+  } catch (error) {
+    console.error('Logout error:', error);
+  } finally {
+    logoutLoading.value = false;
   }
-  router.push('/dashboard');
 };
 
 onMounted(() => {
@@ -136,5 +157,4 @@ const toggleDropdown = () => {
   isDropdownOpen.value = !isDropdownOpen.value;
 };
 </script>
-
 
