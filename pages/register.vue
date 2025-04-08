@@ -80,6 +80,9 @@
   </template>
   
   <script setup>
+  definePageMeta({
+    middleware: 'auth'
+  });
   const { public: { backendUrl } } = useRuntimeConfig();
   
   const form = reactive({
@@ -94,7 +97,7 @@
   const handleRegister = async () => {
     loading.value = true;
     error.value = '';
-  
+
     try {
       const { token } = await $fetch(`${backendUrl}/register`, {
         method: 'POST',
@@ -103,13 +106,13 @@
           'Content-Type': 'application/json'
         }
       });
-  
-      // Store token in localStorage
-      localStorage.setItem('auth_token', token);
-  
-      // Redirect to dashboard or home page
+
+      // Use cookie instead of localStorage
+      const authToken = useCookie('auth_token');
+      authToken.value = token;
+
       await navigateTo('/dashboard');
-  
+
     } catch (err) {
       error.value = err.data?.message || 'Registration failed. Please try again.';
     } finally {
